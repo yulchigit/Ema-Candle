@@ -1,2 +1,2 @@
 # Ema-Candle
-MQL$
+MQL4
