@@ -66,10 +66,10 @@ CloseOrder();
 //+------------------------------------------------------------------+
 int SignaL(){
  ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
- if(ma1<iClose(Symbol(),Period(),1))
+ if(ma1<iClose(Symbol(),Period(),2))
    if(( iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1) ) && ( iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1) ) )
       return(OP_BUYSTOP);
- if(ma1>iClose(Symbol(),Period(),1))
+ if(ma1>iClose(Symbol(),Period(),2))
    if(( iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1) ) && ( iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1) ) )
       return(OP_SELLSTOP);     
 
@@ -84,20 +84,36 @@ void CloseOrder(){
     if( OrderSymbol()==Symbol() && OrderMagicNumber()==MAGICMA) {
    
          if(OrderType()==OP_BUY || OrderType()==OP_BUYSTOP)
-            if(SignaL()==OP_SELLSTOP)   
+            if(SignaL()==OP_SELLSTOP || (( iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1) ) && 
+                                                                           ( iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1) ))
+                                                                            || ma1>iClose(Symbol(),Period(),1)  
+                                                                            || buyclose()==9                 )    
                if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,clrBlack))
                   Print("OrderDelete error ",GetLastError());
          if(OrderType()==OP_SELL || OrderType()==OP_SELLSTOP) 
-            if(SignaL()==OP_BUYSTOP)  
+            if(SignaL()==OP_BUYSTOP || (( iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1) ) && 
+                                                                           ( iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1) ))
+                                                                             || ma1<iClose(Symbol(),Period(),2) 
+                                                                             || sellclose()==9                 )  
                if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
                   Print("OrderDelete error ",GetLastError());   
+
  return;
          
       
    }
   }   
 
-
-
-
 }
+int buyclose(){
+int Buyclose;
+  if( iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) 
+     Buyclose=9;
+ return Buyclose ;
+}
+int sellclose(){
+int Sellclose;
+   if( iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1) )
+      Sellclose=9;
+ return Sellclose;
+ }
