@@ -12,7 +12,7 @@
 #include <Object.mqh>
 
 input double     MaximumRisk        =0.01;
-input double     DecreaseFactor     =2; 
+input double     DecreaseFactor     =2;
 input int        MovingPeriod1      =50;
 input int        MovingPeriod2      =200;
 input int        MovingShift        =1;
@@ -22,9 +22,9 @@ input bool       TrailingStop       =true;
 
 double Trailingqadam;
 double lot;
-double ma1; // 
+double ma1; //
 double ma2; //
-double Sl,Tp1,Tp2; 
+double Sl,Tp1,Tp2;
 double macd,oldmacd;
 int a,res1,res2;
 
@@ -34,7 +34,7 @@ int a,res1,res2;
 int OnInit()
   {
 //---
-   
+
 //---
    return(INIT_SUCCEEDED);
   }
@@ -44,76 +44,95 @@ int OnInit()
 void OnDeinit(const int reason)
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick()
   {
-Comment("Signal: ",IntegerToString(SignaL()));
-if(SignaL()<0) return;
-if(OrdersTotal()==0){
-   if(SignaL()==OP_BUYSTOP){
-      OrderSend(Symbol(),SignaL(),Lot,iHigh(Symbol(),Period(),1),Slippage,0,0,"Buy",MAGICMA,0,clrBlue);
-          }
-   if(SignaL()==OP_SELLSTOP){
-      OrderSend(Symbol(),SignaL(),Lot,iLow(Symbol(),Period(),1),Slippage,0,0,"Sell",MAGICMA,0,clrRed);
-          }
-   }
-CloseOrder();
+   Comment("Signal: ",IntegerToString(SignaL()));
+   if(SignaL()<0)
+      return;
+   if(OrdersTotal()==0)
+     {
+      if(SignaL()==OP_BUYSTOP)
+        {
+         OrderSend(Symbol(),SignaL(),Lot,iHigh(Symbol(),Period(),1),Slippage,0,0,"Buy",MAGICMA,0,clrBlue);
+        }
+      if(SignaL()==OP_SELLSTOP)
+        {
+         OrderSend(Symbol(),SignaL(),Lot,iLow(Symbol(),Period(),1),Slippage,0,0,"Sell",MAGICMA,0,clrRed);
+        }
+     }
+   CloseOrder();
   }
 //+------------------------------------------------------------------+
-int SignaL(){
- ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
- if(ma1<iClose(Symbol(),Period(),2))
-   if(( iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1) ) && ( iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1) ) )
-      return(OP_BUYSTOP);
- if(ma1>iClose(Symbol(),Period(),2))
-   if(( iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1) ) && ( iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1) ) )
-      return(OP_SELLSTOP);     
+int SignaL()
+  {
+   ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
+   if(ma1<iClose(Symbol(),Period(),2))
+      if((iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1)) && (iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1)))
+         return(OP_BUYSTOP);
+   if(ma1>iClose(Symbol(),Period(),2))
+      if((iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) && (iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1)))
+         return(OP_SELLSTOP);
 
-return(EMPTY);
- }
-void CloseOrder(){
+   return(EMPTY);
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void CloseOrder()
+  {
 
 
- for(int i=OrdersTotal()-1; i>=0; i--)
-{
-    if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)) 
-    if( OrderSymbol()==Symbol() && OrderMagicNumber()==MAGICMA) {
-   
-         if(OrderType()==OP_BUY || OrderType()==OP_BUYSTOP)
-            if(SignaL()==OP_SELLSTOP || (( iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1) ) && 
-                                                                           ( iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1) ))
-                                                                            || ma1>iClose(Symbol(),Period(),1)  
-                                                                            || buyclose()==9                 )    
-               if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,clrBlack))
-                  Print("OrderDelete error ",GetLastError());
-         if(OrderType()==OP_SELL || OrderType()==OP_SELLSTOP) 
-            if(SignaL()==OP_BUYSTOP || (( iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1) ) && 
-                                                                           ( iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1) ))
-                                                                             || ma1<iClose(Symbol(),Period(),2) 
-                                                                             || sellclose()==9                 )  
-               if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
-                  Print("OrderDelete error ",GetLastError());   
+   for(int i=OrdersTotal()-1; i>=0; i--)
+     {
+      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+         if(OrderSymbol()==Symbol() && OrderMagicNumber()==MAGICMA)
+           {
 
- return;
-         
-      
-   }
-  }   
+            if(OrderType()==OP_BUY || OrderType()==OP_BUYSTOP)
+               if(SignaL()==OP_SELLSTOP || ((iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) &&
+                                            (iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1)))
+                  || ma1>iClose(Symbol(),Period(),1)
+                  || buyclose()==9)
+                  if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,clrBlack))
+                     Print("OrderDelete error ",GetLastError());
+            if(OrderType()==OP_SELL || OrderType()==OP_SELLSTOP)
+               if(SignaL()==OP_BUYSTOP || ((iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1)) &&
+                                           (iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1)))
+                  || ma1<iClose(Symbol(),Period(),2)
+                  || sellclose()==9)
+                  if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
+                     Print("OrderDelete error ",GetLastError());
 
-}
-int buyclose(){
-int Buyclose;
-  if( iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) 
-     Buyclose=9;
- return Buyclose ;
-}
-int sellclose(){
-int Sellclose;
-   if( iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1) )
+            return;
+
+
+           }
+     }
+
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+int buyclose()
+  {
+   int Buyclose;
+   if(iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1))
+      Buyclose=9;
+   return Buyclose ;
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+int sellclose()
+  {
+   int Sellclose;
+   if(iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1))
       Sellclose=9;
- return Sellclose;
- }
+   return Sellclose;
+  }
+//+------------------------------------------------------------------+
