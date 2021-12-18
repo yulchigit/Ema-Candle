@@ -52,8 +52,8 @@ void OnDeinit(const int reason)
 void OnTick()
   {
    Comment("Signal: ",IntegerToString(SignaL()));
-   if(SignaL()<0)
-      return;
+  // CloseOrder();
+   if(SignaL()<0)CloseOrder();
    if(OrdersTotal()==0)
      {
       if(SignaL()==OP_BUYSTOP)
@@ -94,17 +94,11 @@ void CloseOrder()
            {
 
             if(OrderType()==OP_BUY || OrderType()==OP_BUYSTOP)
-               if(SignaL()==OP_SELLSTOP || ((iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) &&
-                                            (iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1)))
-                  || ma1>iClose(Symbol(),Period(),1)
-                  || buyclose()==9)
+               if(SignaL()==OP_SELLSTOP || buyclose()==9)
                   if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,clrBlack))
                      Print("OrderDelete error ",GetLastError());
             if(OrderType()==OP_SELL || OrderType()==OP_SELLSTOP)
-               if(SignaL()==OP_BUYSTOP || ((iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1)) &&
-                                           (iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1)))
-                  || ma1<iClose(Symbol(),Period(),2)
-                  || sellclose()==9)
+               if(SignaL()==OP_BUYSTOP  || sellclose()==9)
                   if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
                      Print("OrderDelete error ",GetLastError());
 
@@ -120,7 +114,7 @@ void CloseOrder()
 //+------------------------------------------------------------------+
 int buyclose()
   {
-   int Buyclose;
+   int Buyclose=0;
    if(iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1))
       Buyclose=9;
    return Buyclose ;
@@ -130,7 +124,7 @@ int buyclose()
 //+------------------------------------------------------------------+
 int sellclose()
   {
-   int Sellclose;
+   int Sellclose=0;
    if(iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1))
       Sellclose=9;
    return Sellclose;
