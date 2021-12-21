@@ -14,10 +14,10 @@
 input double     MaximumRisk        =0.01;
 input double     DecreaseFactor     =2;
 input int        MovingPeriod1      =50;
-input int        MovingPeriod2      =200;
 input int        MovingShift        =1;
 input int        Slippage           =30;
 input double     Lot                =0.01;
+input int        SellBuyStop        =25;
 input bool       TrailingStop       =true;
 
 double Trailingqadam;
@@ -34,7 +34,7 @@ int a,res1,res2;
 int OnInit()
   {
 //---
-
+ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
 //---
    return(INIT_SUCCEEDED);
   }
@@ -51,31 +51,42 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   Comment("Signal: ",IntegerToString(SignaL()));
-  // CloseOrder();
-   if(SignaL()<0)CloseOrder();
-   if(OrdersTotal()==0)
+   SignaL();
+   Comment("Signal: ",IntegerToString(SignaL())," Selclose :",sellclose(),"  Buyclose :",buyclose()," MA : ",NormalizeDouble(ma1,Digits));
+   if (buyclose() || sellclose() ) {CloseOrder();}
+   if(SignaL()<0)SignaL();CloseOrder();
+   if(OrdersTotal()<1)
      {
       if(SignaL()==OP_BUYSTOP)
         {
-         OrderSend(Symbol(),SignaL(),Lot,iHigh(Symbol(),Period(),1),Slippage,0,0,"Buy",MAGICMA,0,clrBlue);
+         OrderSend(Symbol(),SignaL(),Lot,iHigh(Symbol(),Period(),1)+SellBuyStop*Point,Slippage,0,0,"Buy",MAGICMA,0,clrBlue);
         }
       if(SignaL()==OP_SELLSTOP)
         {
-         OrderSend(Symbol(),SignaL(),Lot,iLow(Symbol(),Period(),1),Slippage,0,0,"Sell",MAGICMA,0,clrRed);
+         OrderSend(Symbol(),SignaL(),Lot,iLow(Symbol(),Period(),1)+SellBuyStop*Point,Slippage,0,0,"Sell",MAGICMA,0,clrRed);
         }
      }
-   CloseOrder();
+
   }
 //+------------------------------------------------------------------+
 int SignaL()
   {
-   ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
+  double ma[];
+  
+ ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
    if(ma1<iClose(Symbol(),Period(),2))
-      if((iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1)) && (iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1)))
+      if((iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1)) && 
+         (iLow(Symbol(),Period(),2)<iLow(Symbol(),Period(),1))   &&
+         (iOpen(_Symbol,_Period,2)<iClose(_Symbol,_Period,2))    &&
+         (iOpen(_Symbol,_Period,1)<iClose(_Symbol,_Period,1))    
+                                                                    )
          return(OP_BUYSTOP);
    if(ma1>iClose(Symbol(),Period(),2))
-      if((iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) && (iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1)))
+      if((iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) && 
+         (iHigh(Symbol(),Period(),2)>iHigh(Symbol(),Period(),1)) &&
+         (iOpen(_Symbol,_Period,2)>iClose(_Symbol,_Period,2))    &&
+         (iOpen(_Symbol,_Period,1)>iClose(_Symbol,_Period,1))    
+                                                                     )
          return(OP_SELLSTOP);
 
    return(EMPTY);
@@ -86,6 +97,33 @@ int SignaL()
 void CloseOrder()
   {
 
+    for(int i=OrdersTotal()-1; i>=0; i--)
+    //for(int i=0; i<OrdersTotal();i++)
+     {
+      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+         if(OrderSymbol()==Symbol() && OrderMagicNumber()==MAGICMA)
+           {
+
+            if(OrderType()==OP_BUY || OrderType()==OP_BUYSTOP)
+               if(SignaL()==OP_SELLSTOP || buyclose()==true)
+                  if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,clrBlack))
+                     Print("OrderDelete error ",GetLastError());
+            if(OrderType()==OP_SELL || OrderType()==OP_SELLSTOP)
+               if(SignaL()==OP_BUYSTOP  || sellclose()==true)
+                  if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
+                     Print("OrderDelete error ",GetLastError());
+
+            return;
+
+
+           }
+     }
+
+  }
+  
+void CloseLimitOrder()
+  {
+
 
    for(int i=OrdersTotal()-1; i>=0; i--)
      {
@@ -94,11 +132,11 @@ void CloseOrder()
            {
 
             if(OrderType()==OP_BUY || OrderType()==OP_BUYSTOP)
-               if(SignaL()==OP_SELLSTOP || buyclose()==9)
+               if(SignaL()==OP_SELLSTOP || buyclose()==true)
                   if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,clrBlack))
                      Print("OrderDelete error ",GetLastError());
             if(OrderType()==OP_SELL || OrderType()==OP_SELLSTOP)
-               if(SignaL()==OP_BUYSTOP  || sellclose()==9)
+               if(SignaL()==OP_BUYSTOP  || sellclose()==true)
                   if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
                      Print("OrderDelete error ",GetLastError());
 
@@ -112,21 +150,28 @@ void CloseOrder()
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-int buyclose()
+bool buyclose()
   {
-   int Buyclose=0;
-   if(iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1))
-      Buyclose=9;
+   bool Buyclose=false;
+   if((iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) &&
+       (iClose(_Symbol,_Period,2)>iClose(_Symbol,_Period,1)) &&
+       (iOpen(_Symbol,_Period,2)>iClose(_Symbol,_Period,2))
+   
+                                                            )
+      Buyclose=true;
    return Buyclose ;
   }
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-int sellclose()
+bool sellclose()
   {
-   int Sellclose=0;
-   if(iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1))
-      Sellclose=9;
+   bool Sellclose=false;
+   if( (iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1)) && 
+       (iClose(_Symbol,_Period,2)<iClose(_Symbol,_Period,1))   &&
+       (iOpen(_Symbol,_Period,2)<iClose(_Symbol,_Period,2)) 
+                                                                 )
+      Sellclose=true;
    return Sellclose;
   }
 //+------------------------------------------------------------------+
