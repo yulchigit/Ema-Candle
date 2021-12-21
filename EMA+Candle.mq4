@@ -11,14 +11,15 @@
 #define MAGICMA   20131111
 #include <Object.mqh>
 
-input double     MaximumRisk        =0.01;
-input double     DecreaseFactor     =2;
+//input double     MaximumRisk        =0.01;
+//input double     DecreaseFactor     =2;
 input int        MovingPeriod1      =50;
 input int        MovingShift        =1;
 input int        Slippage           =30;
 input double     Lot                =0.01;
 input int        SellBuyStop        =25;
-input bool       TrailingStop       =true;
+//input int        TP                 =200;
+//input bool       TrailingStop       =true;
 
 double Trailingqadam;
 double lot;
@@ -35,6 +36,8 @@ int OnInit()
   {
 //---
 ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
+if(!IsDemo()){ Comment(" Real hisobda savdoda ruxsat berilmagan "); } 
+if(IsDemo()){ Comment(" ___Savdo maslahatchisi ishni boshladi___ "); }
 //---
    return(INIT_SUCCEEDED);
   }
@@ -53,20 +56,21 @@ void OnTick()
   {
    
    Comment("Signal: ",IntegerToString(SignaL())," Selclose :",sellclose(),"  Buyclose :",buyclose()," MA : ",NormalizeDouble(ma1,Digits));
-   
-      CloseOrder();
-                           
-      if(SignaL()<0)SignaL();
-                        
-   if(OrdersTotal()<1)
+   if(SignaL()<0)SignaL();//buyclose();sellclose();
+   if( buyclose() || sellclose() ) CloseOrder();
+   //if(OrdersTotal()>0) CloseOrder();
+   if(!IsDemo()){ Comment(" Real hisobda savdoda ruxsat berilmagan "); }                    
+   if(OrdersTotal()<1 && IsDemo())
      {
       if(SignaL()==OP_BUYSTOP)
         {
+        CloseOrder();
          OrderSend(Symbol(),SignaL(),Lot,iHigh(Symbol(),Period(),1)+SellBuyStop*Point,Slippage,0,0,"Buy",MAGICMA,0,clrBlue);
         }
       if(SignaL()==OP_SELLSTOP)
         {
-         OrderSend(Symbol(),SignaL(),Lot,iLow(Symbol(),Period(),1)+SellBuyStop*Point,Slippage,0,0,"Sell",MAGICMA,0,clrRed);
+        CloseOrder();
+         OrderSend(Symbol(),SignaL(),Lot,iLow(Symbol(),Period(),1)-SellBuyStop*Point,Slippage,0,0,"Sell",MAGICMA,0,clrRed);
         }
      }
 
@@ -117,10 +121,12 @@ void CloseOrder()
                      Print("OrderDelete error ",GetLastError());
             if(OrderType()==OP_SELL )
                if(SignaL()==OP_BUYSTOP  || sellclose()==true)
+                  //if(OrderDelete(OrderTicket(),clrRed))return;
                   if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
                      Print("OrderDelete error ",GetLastError());
             if(OrderType()==OP_SELLSTOP )
                if(SignaL()==OP_BUYSTOP  || sellclose()==true)
+                  //if(OrderDelete(OrderTicket(),clrRed)) return;
                   if(!OrderDelete(OrderTicket(),clrRed))
                      Print("OrderDelete error ",GetLastError());
 
