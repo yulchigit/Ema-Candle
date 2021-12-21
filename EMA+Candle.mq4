@@ -51,10 +51,13 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   SignaL();
+   
    Comment("Signal: ",IntegerToString(SignaL())," Selclose :",sellclose(),"  Buyclose :",buyclose()," MA : ",NormalizeDouble(ma1,Digits));
-   if (buyclose() || sellclose() ) {CloseOrder();}
-   if(SignaL()<0)SignaL();CloseOrder();
+   
+      CloseOrder();
+                           
+      if(SignaL()<0)SignaL();
+                        
    if(OrdersTotal()<1)
      {
       if(SignaL()==OP_BUYSTOP)
@@ -71,7 +74,7 @@ void OnTick()
 //+------------------------------------------------------------------+
 int SignaL()
   {
-  double ma[];
+ 
   
  ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
    if(ma1<iClose(Symbol(),Period(),2))
@@ -104,58 +107,42 @@ void CloseOrder()
          if(OrderSymbol()==Symbol() && OrderMagicNumber()==MAGICMA)
            {
 
-            if(OrderType()==OP_BUY || OrderType()==OP_BUYSTOP)
+            if(OrderType()==OP_BUY )
                if(SignaL()==OP_SELLSTOP || buyclose()==true)
                   if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,clrBlack))
                      Print("OrderDelete error ",GetLastError());
-            if(OrderType()==OP_SELL || OrderType()==OP_SELLSTOP)
+            if(OrderType()==OP_BUYSTOP )
+               if(SignaL()==OP_SELLSTOP || buyclose()==true)
+                  if(!OrderDelete(OrderTicket(),clrRed))
+                     Print("OrderDelete error ",GetLastError());
+            if(OrderType()==OP_SELL )
                if(SignaL()==OP_BUYSTOP  || sellclose()==true)
                   if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
                      Print("OrderDelete error ",GetLastError());
+            if(OrderType()==OP_SELLSTOP )
+               if(SignaL()==OP_BUYSTOP  || sellclose()==true)
+                  if(!OrderDelete(OrderTicket(),clrRed))
+                     Print("OrderDelete error ",GetLastError());
 
-            return;
+            //return;
 
 
            }
      }
 
   }
-  
-void CloseLimitOrder()
-  {
 
-
-   for(int i=OrdersTotal()-1; i>=0; i--)
-     {
-      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
-         if(OrderSymbol()==Symbol() && OrderMagicNumber()==MAGICMA)
-           {
-
-            if(OrderType()==OP_BUY || OrderType()==OP_BUYSTOP)
-               if(SignaL()==OP_SELLSTOP || buyclose()==true)
-                  if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,clrBlack))
-                     Print("OrderDelete error ",GetLastError());
-            if(OrderType()==OP_SELL || OrderType()==OP_SELLSTOP)
-               if(SignaL()==OP_BUYSTOP  || sellclose()==true)
-                  if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,clrBlack))
-                     Print("OrderDelete error ",GetLastError());
-
-            return;
-
-
-           }
-     }
-
-  }
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 bool buyclose()
   {
+  ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
    bool Buyclose=false;
-   if((iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) &&
+   if(((iLow(Symbol(),Period(),2)>iLow(Symbol(),Period(),1)) &&
        (iClose(_Symbol,_Period,2)>iClose(_Symbol,_Period,1)) &&
-       (iOpen(_Symbol,_Period,2)>iClose(_Symbol,_Period,2))
+       (iOpen(_Symbol,_Period,2)>iClose(_Symbol,_Period,2))) ||
+       ma1>iClose(_Symbol,_Period,1)
    
                                                             )
       Buyclose=true;
@@ -166,10 +153,12 @@ bool buyclose()
 //+------------------------------------------------------------------+
 bool sellclose()
   {
+  ma1=iMA(Symbol(),Period(),MovingPeriod1,MovingShift,MODE_EMA,PRICE_CLOSE,1);
    bool Sellclose=false;
-   if( (iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1)) && 
+   if(((iHigh(Symbol(),Period(),2)<iHigh(Symbol(),Period(),1)) && 
        (iClose(_Symbol,_Period,2)<iClose(_Symbol,_Period,1))   &&
-       (iOpen(_Symbol,_Period,2)<iClose(_Symbol,_Period,2)) 
+       (iOpen(_Symbol,_Period,2)<iClose(_Symbol,_Period,2)))   ||
+       ma1<iClose(_Symbol,_Period,1) 
                                                                  )
       Sellclose=true;
    return Sellclose;
